@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Detectives de la Energía - Videojuego 2D Pixel Art</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="assets/kid_player.png" type="image/png">
+</head>
+<body>
+
+  <!-- Encabezado Arcade -->
+  <header>
+    <div class="logo-area">
+      <span class="logo-icon">⚡</span>
+      <div>
+        <h1>DETECTIVES DE LA ENERGÍA</h1>
+        <div class="subtitle">MISIÓN: DETECTAR Y APAGAR EL DERROCHE ENERGÉTICO</div>
+      </div>
+    </div>
+    
+    <!-- Selector de Nivel y Botones -->
+    <div class="header-badges">
+      <div class="level-selector-group">
+        <button id="btn-lvl-easy" class="btn-level active">🟢 FÁCIL (1 min)</button>
+        <button id="btn-lvl-hard" class="btn-level">🔴 DIFÍCIL (30 s)</button>
+      </div>
+      <button id="btn-guide" class="btn-header">📖 GUÍA</button>
+      <button id="btn-sound" class="btn-header">🔊 ON</button>
+      <button id="btn-restart" class="btn-header">🔄 REINICIAR</button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal del Juego -->
+  <main id="game-wrapper">
+
+    <!-- Tablero de Métricas Energéticas en Vivo -->
+    <div class="top-dashboard">
+      <!-- Vatímetro -->
+      <div class="metric-card">
+        <div class="metric-title">
+          <span>VATÍMETRO GENERAL</span>
+          <span style="font-size: 11px; color: #64748b;">(W)</span>
+        </div>
+        <div id="watt-meter" class="metric-value critical">11.900 W</div>
+      </div>
+
+      <!-- Barra de Sobrecarga de la Red -->
+      <div class="metric-card">
+        <div class="metric-title">
+          <span>TÉRMICA / DISYUNTOR</span>
+          <span id="overload-text" style="font-size: 12px; color: #ffea00; font-weight: bold;">TEMPERATURA MEDIA</span>
+        </div>
+        <div class="progress-track">
+          <div id="overload-bar" class="progress-fill" style="width: 35%;"></div>
+        </div>
+      </div>
+
+      <!-- Reloj de Misión -->
+      <div class="metric-card">
+        <div class="metric-title">
+          <span>TIEMPO RESTANTE</span>
+          <span id="timer-status-icon">⏳</span>
+        </div>
+        <div id="time-meter" class="metric-value warning">01:00</div>
+        <div id="pause-indicator" class="pause-tag" style="display: none;">⏸️ PAUSADO (LEYENDO)</div>
+      </div>
+
+      <!-- Ahorro y Puntuación con multiplicador de dificultad -->
+      <div class="metric-card">
+        <div class="metric-title">
+          <span>PUNTOS & NIVEL</span>
+          <span id="level-badge" style="font-size: 10px; color: #00e676; font-weight: bold;">FÁCIL</span>
+        </div>
+        <div id="score-meter" class="metric-value safe">0 pts</div>
+      </div>
+    </div>
+
+    <!-- Contenedor del Lienzo del Juego -->
+    <div id="canvas-container">
+      <canvas id="gameCanvas" width="1376" height="768"></canvas>
+
+      <!-- Mensaje Toast Flotante -->
+      <div id="toast-message">¡Controla al Detective (con flechas/WASD o clics) para apagar los artefactos!</div>
+
+      <!-- Alerta de artefacto re-encendido -->
+      <div id="alert-banner" class="alert-reignite">
+        ⚠️ ¡CUIDADO! ¡Alguien volvió a encender un artefacto!
+      </div>
+
+      <!-- Modal Escáner del Detective (Pausa el tiempo) -->
+      <div id="scanner-modal" class="scanner-modal-backdrop">
+        <div class="scanner-modal">
+          <div class="scanner-header">
+            <div class="scanner-title">
+              <span>🔍</span>
+              <span>ESCÁNER DETECTIVE DE ENERGÍA</span>
+              <span class="paused-badge">⏸️ TIEMPO PAUSADO</span>
+            </div>
+            <button id="scanner-close-btn" class="close-btn" title="Cerrar">&times;</button>
+          </div>
+
+          <div class="scanner-body">
+            <div class="appliance-icon-box">
+              <img id="scanner-img" src="assets/icon_heater.png" alt="Artefacto">
+            </div>
+            <div class="appliance-details">
+              <h3 id="scanner-name" class="appliance-name">ESTUFA RADIANTE</h3>
+              <div id="scanner-cat-tag" class="appliance-category-tag cat-excessive">🔴 CONSUMO EXCESIVO</div>
+              
+              <div class="stat-row">
+                <div class="stat-item">Consumo: <b id="scanner-power">2.000 W</b></div>
+                <div class="stat-item">Ubicación: <b id="scanner-room">Dormitorio Superior</b></div>
+              </div>
+
+              <div class="detective-tip-box">
+                <div style="font-size: 12px; color: #38bdf8; font-weight: bold; margin-bottom: 4px;">💡 CONSEJO DETECTIVE:</div>
+                <p id="scanner-tip">Generar calor mediante resistencia eléctrica directa es uno de los mayores devoradores de energía del hogar.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="scanner-actions">
+            <button id="scanner-cancel-btn" class="btn-action-secondary">CERRAR (VOLVER)</button>
+            <button id="scanner-action-btn" class="btn-action-primary">⚡ APAGAR ARTEFACTO</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Victoria / Misión Cumplida -->
+      <div id="win-modal" class="scanner-modal-backdrop">
+        <div class="scanner-modal" style="text-align: center; max-width: 580px;">
+          <div style="font-size: 40px; margin-bottom: 10px;">🏆✨</div>
+          <h2 style="font-family: 'Press Start 2P'; font-size: 15px; color: #00e676; margin-bottom: 12px;">¡MISIÓN CUMPLIDA, DETECTIVE!</h2>
+          <p style="font-size: 18px; color: #bed0ea; line-height: 1.4; margin-bottom: 16px;">
+            ¡Has salvado la red eléctrica a tiempo y desactivado el derroche energético!
+          </p>
+
+          <div style="background: #192336; border: 2px solid #2a3b5c; border-radius: 6px; padding: 14px; margin-bottom: 18px; text-align: left; font-size: 17px;">
+            <div style="margin-bottom: 6px;">🎯 Nivel superado: <b id="final-level" style="color: #00e5ff;">FÁCIL (1 min)</b></div>
+            <div style="margin-bottom: 6px;">⚡ Potencia final en la casa: <b id="final-watts" style="color: #00e676;">250 W</b> (¡Óptimo!)</div>
+            <div style="margin-bottom: 6px;">⏱️ Tiempo sobrante: <b id="final-time" style="color: #00e5ff;">00:24 s</b></div>
+            <div style="margin-bottom: 6px;">💰 Puntuación total: <b id="final-score" style="color: #ffea00;">2.400 pts</b></div>
+            <div style="margin-top: 10px; font-family: 'Press Start 2P'; font-size: 11px; color: #ffea00;">RANGO: <span id="final-rank">S - GUARDIÁN DE LA RED</span> ⭐⭐⭐</div>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <button id="btn-win-replay" class="btn-action-secondary" style="flex: 1;">REPETIR NIVEL</button>
+            <button id="btn-win-next" class="btn-action-primary" style="flex: 1;">PROBAR MODO DIFÍCIL (30s) 🔥</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Derrota / Saltó la Térmica -->
+      <div id="lose-modal" class="scanner-modal-backdrop">
+        <div class="scanner-modal" style="text-align: center; max-width: 550px; border-color: #ff1744;">
+          <div style="font-size: 44px; margin-bottom: 10px; animation: blink 0.5s infinite alternate;">💥⚡</div>
+          <h2 style="font-family: 'Press Start 2P'; font-size: 15px; color: #ff1744; margin-bottom: 12px;">¡MISIÓN FALLIDA!</h2>
+          <p id="lose-reason" style="font-size: 18px; color: #bed0ea; line-height: 1.4; margin-bottom: 20px;">
+            La red eléctrica colapsó por exceso de consumo prolongado o se acabó el tiempo.
+          </p>
+          <button id="btn-lose-retry" class="btn-action-primary" style="background: #ff1744; border-color: #b71c1c; color: #fff; width: 100%;">INTENTAR DE NUEVO</button>
+        </div>
+      </div>
+
+      <!-- Modal Guía del Detective / Enciclopedia -->
+      <div id="guide-modal" class="scanner-modal-backdrop">
+        <div class="scanner-modal info-modal">
+          <div class="scanner-header">
+            <div class="scanner-title">
+              <span>📖</span>
+              <span>GUÍA DEL DETECTIVE: TABLA DE CONSUMO</span>
+              <span class="paused-badge">⏸️ PAUSADO</span>
+            </div>
+            <button id="guide-close-btn" class="close-btn">&times;</button>
+          </div>
+
+          <p style="font-size: 16px; color: #94a3b8; line-height: 1.3;">
+            Conoce los artefactos de la casa, su impacto en la red eléctrica y cómo apagarlos:
+          </p>
+
+          <div class="encyclopedia-grid">
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-excessive">🔴 2.200 W</span>
+              <h4>AIRE ACONDICIONADO</h4>
+              <p>Fijar a 24°C en verano ahorra hasta un 30%. Mantén puertas y ventanas cerradas.</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-excessive">🔴 2.000 W</span>
+              <h4>ESTUFA RADIANTE</h4>
+              <p>Calentar por resistencia eléctrica es muy costoso. ¡Uno de los mayores derroches!</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-excessive">🔴 2.000 W</span>
+              <h4>ANAFE ELÉCTRICO</h4>
+              <p>Tapar las ollas reduce el tiempo de cocción hasta un 25% y aprovecha el calor residual.</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-excessive">🔴 1.800 W</span>
+              <h4>PLANCHAR A VAPOR</h4>
+              <p>Plancha toda la ropa en una sola tanda para no calentar la resistencia varias veces.</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-high">🟠 1.400 W</span>
+              <h4>MICROONDAS</h4>
+              <p>Gran potencia instantánea. Desenchúfalo para evitar consumo vampiro de su pantalla.</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-high">🟠 1.200 W</span>
+              <h4>LAVARROPAS</h4>
+              <p>El 80% de la energía del lavado se va en calentar agua. Prefiere ciclos con agua fría.</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-high">🟠 500 W</span>
+              <h4>HELADERA ABIERTA</h4>
+              <p>No la dejes abierta pensando qué comer; el motor trabajará sin parar.</p>
+            </div>
+
+            <div class="encyclopedia-card">
+              <span class="appliance-category-tag cat-medium">🟡 250 W</span>
+              <h4>TV Y CONSOLAS</h4>
+              <p>El consumo fantasma o standby suma hasta un 10% de la factura eléctrica anual.</p>
+            </div>
+          </div>
+
+          <div style="margin-top: 15px; text-align: center;">
+            <button id="guide-ok-btn" class="btn-action-primary" style="padding: 10px 24px;">¡VOLVER A LA PARTIDA!</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Barra de Controles e Instrucciones -->
+    <div class="controls-bar">
+      <div class="instructions-keys">
+        <span>🎮 CONTROLES:</span>
+        <span><span class="key-badge">◄</span> <span class="key-badge">►</span> o <span class="key-badge">A</span> <span class="key-badge">D</span> Caminar</span>
+        <span><span class="key-badge">▲</span> <span class="key-badge">▼</span> o <span class="key-badge">W</span> <span class="key-badge">S</span> Escaleras</span>
+        <span><span class="key-badge">ESPACIO</span> o <span class="key-badge">E</span> Escanear / Apagar</span>
+      </div>
+      <div class="hint-text">
+        ⚡ <i>¡Cuidado! Los artefactos pueden volver a prenderse si te descuidas</i>
+      </div>
+    </div>
+
+    <!-- Controles Táctiles (Móviles / Tablets) -->
+    <div id="touch-controls">
+      <div class="d-pad">
+        <div></div>
+        <button id="btn-touch-up" class="touch-btn">▲</button>
+        <div></div>
+        <button id="btn-touch-left" class="touch-btn">◄</button>
+        <div></div>
+        <button id="btn-touch-right" class="touch-btn">►</button>
+        <div></div>
+        <button id="btn-touch-down" class="touch-btn">▼</button>
+        <div></div>
+      </div>
+      <div class="action-pad">
+        <button id="btn-touch-action" class="btn-touch-action">⚡ ACCIÓN<br>APAGAR</button>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
