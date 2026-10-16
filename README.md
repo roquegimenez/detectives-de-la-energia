@@ -2,6 +2,8 @@
 
 > **Videojuego 2D Pixel Art para navegador** enfocado en la concientización del ahorro y uso responsable de la energía eléctrica en el hogar.
 
+🎮 **[¡Jugar en Vivo en GitHub Pages!](https://roquegimenez.github.io/detectives-de-la-energia/)**
+
 ![Detectives de la Energía](assets/house.jpg)
 
 ---
